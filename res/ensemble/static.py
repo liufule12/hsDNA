@@ -1,3 +1,4 @@
+# encoding=utf-8
 __author__ = 'Fule Liu'
 
 
@@ -6,12 +7,27 @@ import os
 
 
 def statics(fold_name):
+    """统计集成学习后sn，sp，MCC，ACC，并找出最大的ACC。
+    """
     files = os.listdir(fold_name)
+    max_acc = 0
+    final_sn = 0
+    final_sp = 0
+    final_mcc = 0
+    final_path = ''
     for file_name in files:
         file_path = fold_name + file_name
         print(file_path)
         sn, sp, mcc, acc = calc_acc(file_path)
+        if acc > max_acc:
+            max_acc = acc
+            final_sn = sn
+            final_sp = sp
+            final_mcc = mcc
+            final_path = file_path
         print(sn, sp, mcc, acc)
+
+    print(final_sn, final_sp, final_mcc, max_acc, final_path)
 
 
 def calc_acc(file_name):
