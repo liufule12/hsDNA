@@ -151,8 +151,151 @@ def borderline_smote(X, y, minority_target, N, k):
             X[danger_minority_indices, :])
 
 
+def borderline_smote_indices(X, y, minority_target, N, k):
+    """Returns safe_minority indices, synthetic minority samples and danger minority indices.
+
+    Parameters
+    ----------
+    X : array-like, shape = [n_samples, n_features]
+        Holds the minority and majority samples
+    y : array-like, shape = [n_samples]
+        Holds the class targets for samples
+    minority_target : value for minority class
+    N : percentage of new synthetic samples:
+        n_synthetic_samples = N/100 * n_minority_samples. Can be < 100.
+    k : int. Number of nearest neighbours.
+    h : high in random.uniform to scale dif of synthetic sample
+
+    Returns
+    -------
+    safe_minority_indices : Safe minorities indices
+    synthetic : Synthetic sample of minorities in danger zone
+    danger_minority_indices : Minorities of danger zone indices
+    """
+
+    n_samples, _ = X.shape
+
+    # Learn nearest neighbours on complete training set
+    neigh = NearestNeighbors(n_neighbors=k)
+    neigh.fit(X)
+
+    safe_minority_indices = []
+    danger_minority_indices = []
+
+    for i in range(n_samples):
+        if y[i] != minority_target:
+            continue
+
+        nn = neigh.kneighbors(X[i], return_distance=False)
+        majority_neighbours = 0
+        for n in nn[0]:
+            if y[n] != minority_target:
+                majority_neighbours += 1
+        if majority_neighbours == len(nn[0]):
+            continue
+        elif majority_neighbours < (len(nn[0]) / 2):
+            safe_minority_indices.append(i)
+        else:
+            # DANGER zone
+            danger_minority_indices.append(i)
+
+    # SMOTE danger minority samples
+    synthetic_samples = smote(X[danger_minority_indices], N, k, h=0.5)
+
+    return (safe_minority_indices,
+            synthetic_samples,
+            danger_minority_indices)
+
+
+def loop_borderline_smote(X, y, minority_target, majority_targer, N, k):
+    """To generate more average data.
+
+    Parameters
+    ----------
+    X : array-like, shape = [n_samples, n_features]
+        Holds the minority and majority samples
+    y : array-like, shape = [n_samples]
+        Holds the class targets for samples
+    minority_target : value for minority class
+    majority_target : value for majority class
+    N : percentage of new synthetic samples:
+        n_synthetic_samples = N/100 * n_minority_samples. Can be < 100.
+    k : int. Number of nearest neighbours.
+    h : high in random.uniform to scale dif of synthetic sample
+
+    Returns
+    -------
+    synthetic : Synthetic sample of minorities in danger zone
+    """
+
+    synthetic_samples = []
+
+    new_y = np.array(y)
+    new_minority_target = minority_target
+
+    n_minority_samples = count_label(y, minority_target)
+    # n_majority_samples = count_label(y, majority_targer)
+
+    while n_minority_samples > 80:
+        safe_minority_indices, temp_synthetic_samples, danger_minority_indices =\
+            borderline_smote_indices(X, new_y, new_minority_target, N, k)
+        print("safe_minority_indices", len(safe_minority_indices))
+        print("temp_synthetic_samples", temp_synthetic_samples.shape)
+        print("danger_minority_indices", len(danger_minority_indices))
+        print("\n")
+        synthetic_samples += temp_synthetic_samples.tolist()
+        new_y[safe_minority_indices] = minority_target
+        new_y[danger_minority_indices] = majority_targer
+        n_minority_samples = len(safe_minority_indices)
+
+    return synthetic_samples
+
+
+def count_label(y, target):
+    """Count target label.
+
+    Parameters
+    ----------
+    y : array-like, shape = [n_samples]
+        Holds the class label for samples
+    target : value for target label.
+
+    Returns
+    -------
+    count : the number of target label
+    """
+
+    n_target = 0
+    for label in y:
+        if label == target:
+            n_target += 1
+
+    return n_target
+
+
 def main():
-    pass
+    from repDNA.nac import Kmer
+    from repDNA.util import write_libsvm
+    kmer = Kmer(k=1, normalize=True)
+    with open("hs.fasta") as fp:
+        pos = kmer.make_kmer_vec(fp)
+    with open("non-hs.fasta") as fp:
+        neg = kmer.make_kmer_vec(fp)
+    print(len(pos))
+    print(len(neg))
+    data = np.array(pos + neg)
+    labels = np.array([1] * len(pos) + [-1] * len(neg))
+    synthetic1 = loop_borderline_smote(data, labels, 1, -1, N=100, k=5)
+    synthetic2 = loop_borderline_smote(data, labels, 1, -1, N=65, k=5)
+    synthetic = synthetic1 + synthetic2
+    for e in synthetic:
+        print(e)
+    print(len(synthetic))
+
+    pos += synthetic
+    data = pos + neg
+    labels = [1] * len(pos) + [-1] * len(neg)
+    write_libsvm(data, labels, "loop_borderline_smote.txt")
 
 
 if __name__ == "__main__":
