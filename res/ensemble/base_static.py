@@ -39,7 +39,7 @@ def calc_acc(file_name):
     tn = 0
     fp = 0
     fn = 0
-    for idx, line in enumerate(lines):
+    for idx, line in enumerate(lines[1:]):
         line = line.rstrip().split()
         label = line[0]
         # print(pos_prob)
@@ -64,4 +64,5 @@ def calc_acc(file_name):
 
 
 if __name__ == "__main__":
-    base_statics_cv5("../cv_psednc_article_predict/")
+    # base_statics_cv5("../cv_psednc_article_predict/")
+    base_statics_cv5("../cv_revckmer_article_predict/")
