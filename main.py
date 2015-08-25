@@ -1,383 +1,249 @@
+# encoding=utf-8
 __author__ = 'Fule Liu'
 
+import os
 
-import time
-import numpy as np
-
-import smote
-from repDNA.nac import RevcKmer
+from repDNA.nac import Kmer, RevcKmer
+from repDNA.ac import DACC
 from repDNA.psenac import PseDNC
-from repDNA.util import get_data
+from repDNA.util import write_libsvm
 
 
-def write_libsvm(vector_list, label_list, write_file):
-    """Write the vectors into disk in livSVM format."""
-    len_vector_list = len(vector_list)
-    len_label_list = len(label_list)
-    if len_vector_list == 0:
-        raise ValueError("The vector is none.")
-    if len_label_list == 0:
-        raise ValueError("The label is none.")
-    if len_vector_list != len_label_list:
-        raise ValueError("The length of vector and label is different.")
-
-    with open(write_file, 'wb') as f:
-        for ind1, vec in enumerate(vector_list):
-            write_line = str(label_list[ind1])
-            for ind2, val in enumerate(vec):
-                write_ind_val = ":".join([str(ind2+1), str(vec[ind2])])
-                write_line = " ".join([write_line, write_ind_val])
-            f.write(write_line)
-            f.write('\n')
+def auto_cv5_kmer_tool(k, write_fold):
+    for i in range(5):
+        test_neg_file = "data/cv5/test_neg_" + str(i)
+        test_pos_file = "data/cv5/test_pos_" + str(i)
+        train_neg_file = "data/cv5/train_neg_" + str(i)
+        train_pos_file = "data/cv5/train_pos_" + str(i)
+        test_write_file = write_fold + "cv5_kmer_test_" + str(i)
+        train_write_file = write_fold + "cv5_kmer_train_" + str(i)
+        cv5_kmer_tool(k=k, test_neg_file=test_neg_file, test_pos_file=test_pos_file,
+                      train_neg_file=train_neg_file, train_pos_file=train_pos_file,
+                      test_write_file=test_write_file, train_write_file=train_write_file)
 
 
-def whole_revc_kmer(pos_file, neg_file, k):
-    """Generate revc_kmer into a file combined positive and negative file."""
-    revc_kmer = RevcKmer(k=k, normalize=True, upto=True)
+def auto_cv5_upto_revckmer_tool(k, write_fold):
+    for i in range(5):
+        test_neg_file = "data/cv5/test_neg_" + str(i)
+        test_pos_file = "data/cv5/test_pos_" + str(i)
+        train_neg_file = "data/cv5/train_neg_" + str(i)
+        train_pos_file = "data/cv5/train_pos_" + str(i)
+        test_write_file = write_fold + "cv5_kmer_test_" + str(i)
+        train_write_file = write_fold + "cv5_kmer_train_" + str(i)
+        cv5_upto_revckmer_tool(k=k, test_neg_file=test_neg_file, test_pos_file=test_pos_file,
+                               train_neg_file=train_neg_file, train_pos_file=train_pos_file,
+                               test_write_file=test_write_file, train_write_file=train_write_file)
+
+
+def auto_cv5_dacc_tool(lag, write_file_prefix):
+    for i in range(5):
+        print(i)
+        test_neg_file = "data/cv5/test_neg_" + str(i)
+        test_pos_file = "data/cv5/test_pos_" + str(i)
+        train_neg_file = "data/cv5/train_neg_" + str(i)
+        train_pos_file = "data/cv5/train_pos_" + str(i)
+        test_write_file = write_file_prefix + "_test_" + str(i)
+        train_write_file = write_file_prefix + "_train_" + str(i)
+        cv5_dacc_tool(lag=lag, test_neg_file=test_neg_file, test_pos_file=test_pos_file,
+                      train_neg_file=train_neg_file, train_pos_file=train_pos_file,
+                      test_write_file=test_write_file, train_write_file=train_write_file)
+
+
+def auto_cv5_psednc_tool(lamada, w, write_file_prefix):
+    for i in range(5):
+        print(i)
+        test_neg_file = "data/cv5/test_neg_" + str(i)
+        test_pos_file = "data/cv5/test_pos_" + str(i)
+        train_neg_file = "data/cv5/train_neg_" + str(i)
+        train_pos_file = "data/cv5/train_pos_" + str(i)
+        test_write_file = write_file_prefix + "_test_" + str(i)
+        train_write_file = write_file_prefix + "_train_" + str(i)
+        cv5_psednc_tool(lamada=lamada, w=w, test_neg_file=test_neg_file, test_pos_file=test_pos_file,
+                        train_neg_file=train_neg_file, train_pos_file=train_pos_file,
+                        test_write_file=test_write_file, train_write_file=train_write_file)
+
+
+def cv5_kmer_tool(k, test_neg_file, test_pos_file, train_neg_file, train_pos_file, test_write_file, train_write_file):
+    kmer = Kmer(k=k, normalize=True)
+    with open(test_neg_file) as fp:
+        test_neg_vecs = kmer.make_kmer_vec(fp)
+    with open(test_pos_file) as fp:
+        test_pos_vecs = kmer.make_kmer_vec(fp)
+    with open(train_pos_file) as fp:
+        train_pos_vecs = kmer.make_kmer_vec(fp)
+    with open(train_neg_file) as fp:
+        train_neg_vecs = kmer.make_kmer_vec(fp)
+
+    train_vecs = train_pos_vecs + train_neg_vecs
+    test_vecs = test_pos_vecs + test_neg_vecs
+    train_labels = [1] * len(train_pos_vecs) + [-1] * len(train_neg_vecs)
+    test_labels = [1] * len(test_pos_vecs) + [-1] * len(test_neg_vecs)
+
+    # Write file.
+    write_libsvm(train_vecs, train_labels, train_write_file)
+    write_libsvm(test_vecs, test_labels, test_write_file)
+
+
+def cv5_upto_revckmer_tool(k, test_neg_file, test_pos_file, train_neg_file, train_pos_file, test_write_file,
+                           train_write_file):
+    kmer = RevcKmer(k=k, upto=True, normalize=True)
+    with open(test_neg_file) as fp:
+        test_neg_vecs = kmer.make_revckmer_vec(fp)
+    with open(test_pos_file) as fp:
+        test_pos_vecs = kmer.make_revckmer_vec(fp)
+    with open(train_pos_file) as fp:
+        train_pos_vecs = kmer.make_revckmer_vec(fp)
+    with open(train_neg_file) as fp:
+        train_neg_vecs = kmer.make_revckmer_vec(fp)
+
+    train_vecs = train_pos_vecs + train_neg_vecs
+    test_vecs = test_pos_vecs + test_neg_vecs
+    train_labels = [1] * len(train_pos_vecs) + [-1] * len(train_neg_vecs)
+    test_labels = [1] * len(test_pos_vecs) + [-1] * len(test_neg_vecs)
+
+    # Write file.
+    write_libsvm(train_vecs, train_labels, train_write_file)
+    write_libsvm(test_vecs, test_labels, test_write_file)
+
+
+def cv5_dacc_tool(lag, test_neg_file, test_pos_file, train_neg_file, train_pos_file, test_write_file, train_write_file):
+    dacc = DACC(lag=lag)
+    with open(test_neg_file) as fp:
+        test_neg_vecs = dacc.make_dacc_vec(fp, phyche_index=['Twist', 'Tilt', 'Roll', 'Shift', 'Slide', 'Rise'])
+    with open(test_pos_file) as fp:
+        test_pos_vecs = dacc.make_dacc_vec(fp, phyche_index=['Twist', 'Tilt', 'Roll', 'Shift', 'Slide', 'Rise'])
+    with open(train_pos_file) as fp:
+        train_pos_vecs = dacc.make_dacc_vec(fp, phyche_index=['Twist', 'Tilt', 'Roll', 'Shift', 'Slide', 'Rise'])
+    with open(train_neg_file) as fp:
+        train_neg_vecs = dacc.make_dacc_vec(fp, phyche_index=['Twist', 'Tilt', 'Roll', 'Shift', 'Slide', 'Rise'])
+
+    train_vecs = train_pos_vecs + train_neg_vecs
+    test_vecs = test_pos_vecs + test_neg_vecs
+    train_labels = [1] * len(train_pos_vecs) + [-1] * len(train_neg_vecs)
+    test_labels = [1] * len(test_pos_vecs) + [-1] * len(test_neg_vecs)
+
+    # Write file.
+    write_libsvm(train_vecs, train_labels, train_write_file)
+    write_libsvm(test_vecs, test_labels, test_write_file)
+
+
+def cv5_psednc_tool(lamada, w, test_neg_file, test_pos_file, train_neg_file, train_pos_file, test_write_file,
+                    train_write_file):
+    psednc = PseDNC(lamada=lamada, w=w)
+    with open(test_neg_file) as fp:
+        test_neg_vecs = psednc.make_psednc_vec(fp)
+    with open(test_pos_file) as fp:
+        test_pos_vecs = psednc.make_psednc_vec(fp)
+    with open(train_pos_file) as fp:
+        train_pos_vecs = psednc.make_psednc_vec(fp)
+    with open(train_neg_file) as fp:
+        train_neg_vecs = psednc.make_psednc_vec(fp)
+
+    train_vecs = train_pos_vecs + train_neg_vecs
+    test_vecs = test_pos_vecs + test_neg_vecs
+    train_labels = [1] * len(train_pos_vecs) + [-1] * len(train_neg_vecs)
+    test_labels = [1] * len(test_pos_vecs) + [-1] * len(test_neg_vecs)
+
+    # Write file.
+    write_libsvm(train_vecs, train_labels, train_write_file)
+    write_libsvm(test_vecs, test_labels, test_write_file)
+
+
+def kmer_tool(k, pos_file, neg_file, write_file):
+    kmer = Kmer(k=k, normalize=True)
     with open(pos_file) as fp:
-        pos_vecs = revc_kmer.make_revckmer_vec(fp)
+        pos_vecs = kmer.make_kmer_vec(fp)
     with open(neg_file) as fp:
-        neg_vecs = revc_kmer.make_revckmer_vec(fp)
+        neg_vecs = kmer.make_kmer_vec(fp)
+
     vecs = pos_vecs + neg_vecs
     labels = [1] * len(pos_vecs) + [-1] * len(neg_vecs)
 
     # Write file.
-    write_file = "data/whole_revc_kmer.txt"
     write_libsvm(vecs, labels, write_file)
 
 
-def cv5_revc_kmer(fold_path, filename, k):
-    revc_kmer = RevcKmer(k=k, normalize=True, upto=True)
-    for i in range(5):
-        # Generate RevcKmer vecs.
-        with open(fold_path + "test_neg_" + str(i)) as fp:
-            test_neg_revc_kmer_vecs = revc_kmer.make_revckmer_vec(fp)
-        with open(fold_path + "test_pos_" + str(i)) as fp:
-            test_pos_revc_kmer_vecs = revc_kmer.make_revckmer_vec(fp)
-        with open(fold_path + "train_neg_" + str(i)) as fp:
-            train_neg_revc_kmer_vecs = revc_kmer.make_revckmer_vec(fp)
-        with open(fold_path + "train_pos_" + str(i)) as fp:
-            train_pos_revc_kmer_vecs = revc_kmer.make_revckmer_vec(fp)
+def dacc_tool(lag, pos_file, neg_file, write_file):
+    dacc = DACC(lag=lag)
+    with open(pos_file) as fp:
+        pos_vecs = dacc.make_dacc_vec(fp, phyche_index=['Twist', 'Tilt', 'Roll', 'Shift', 'Slide', 'Rise'])
+    # print(pos_vecs)
+    with open(neg_file) as fp:
+        neg_vecs = dacc.make_dacc_vec(fp, phyche_index=['Twist', 'Tilt', 'Roll', 'Shift', 'Slide', 'Rise'])
 
-        # Write test file.
-        write_file = fold_path + filename + "_test_" + str(i) + ".txt"
-        test_vecs = test_pos_revc_kmer_vecs + test_neg_revc_kmer_vecs
-        test_vecs_labels = [1] * len(test_pos_revc_kmer_vecs) + [-1] * len(test_neg_revc_kmer_vecs)
-        write_libsvm(test_vecs, test_vecs_labels, write_file)
-
-        # Write train file.
-        write_file = fold_path + filename + "_train_" + str(i) + ".txt"
-        train_vecs = train_pos_revc_kmer_vecs + train_neg_revc_kmer_vecs
-        train_vecs_labels = [1] * len(train_pos_revc_kmer_vecs) + [-1] * len(train_neg_revc_kmer_vecs)
-        write_libsvm(train_vecs, train_vecs_labels, write_file)
-
-
-def borderline_smote_revc_kmer():
-    revc_kmer = RevcKmer(k=6, normalize=True, upto=True)
-    with open("data/hs.fasta") as f:
-        pos_vecs = np.array(revc_kmer.make_revckmer_vec(f))
-    with open("data/non-hs.fasta") as f:
-        neg_vecs = np.array(revc_kmer.make_revckmer_vec(f))
-
-    vecs = np.row_stack((pos_vecs, neg_vecs))
-    vecs_labels = [1] * len(pos_vecs) + [-1] * len(neg_vecs)
-    _1, synthetic1, _2 = smote.borderline_smote(vecs, vecs_labels, 1, N=300, k=5)
-
-    pos_vecs = pos_vecs.tolist() + synthetic1.tolist()
-    vecs = pos_vecs + neg_vecs.tolist()
-    labels = [1] * len(pos_vecs) + [-1] * len(neg_vecs)
-    write_libsvm(vecs, labels, "borderline_smote_revc_kmer.txt")
-
-
-def borderline_smote_revc_psednc(fold_path):
-    revc_kmer = RevcKmer(k=2, normalize=True, upto=True)
-    with open("data/hs.fasta") as f:
-        pos_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(f))
-    with open("data/non-hs.fasta") as f:
-        neg_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(f))
-
-    lamada = 6
-    w = 0.8
-    psednc = PseDNC(lamada, w)
-    with open("data/hs.fasta") as f:
-        pos_psednc_vecs = np.array(psednc.make_psednc_vec(f))
-    with open("data/non-hs.fasta") as f:
-        neg_psednc_vecs = np.array(psednc.make_psednc_vec(f))
-
-    pos_vecs = np.column_stack((pos_revc_kmer_vecs, pos_psednc_vecs[:, -lamada:]))
-    neg_vecs = np.column_stack((neg_revc_kmer_vecs, neg_psednc_vecs[:, -lamada:]))
-    vecs = np.row_stack((pos_vecs,  neg_vecs))
-    vecs_labels = [1] * len(pos_vecs) + [-1] * len(neg_vecs)
-    _1, synthetic, _2 = (smote.borderline_smote(vecs, vecs_labels, 1, N=300, k=5))
-    pos_vecs = pos_vecs.tolist() + synthetic.tolist()
-    vecs = pos_vecs + neg_vecs.tolist()
+    vecs = pos_vecs + neg_vecs
     labels = [1] * len(pos_vecs) + [-1] * len(neg_vecs)
 
-    lamada_n = "_".join([str(lamada), str(w)])
-    write_file = "/".join([fold_path, lamada_n])
-    print(write_file)
+    # Write file.
     write_libsvm(vecs, labels, write_file)
 
 
-def cv5():
-    """Write 5 fold cross split.
-    Because if others want to repeat this experiment, they need this split data.
+def psednc_tool(lamada, w, pos_file, neg_file, write_file):
+    psednc = PseDNC(lamada=lamada, w=w)
+    with open(pos_file) as fp:
+        pos_vecs = psednc.make_psednc_vec(fp)
+    with open(neg_file) as fp:
+        neg_vecs = psednc.make_psednc_vec(fp)
 
-    Return
-    ------
-    pos_cv, array, shape(5, num_every_fold)
-    neg_cv, array, shape(5, num_every_fold)
-    """
-    # 5 fold cross split.
-    with open("data/hs.fasta") as fp:
-        pos = np.array(get_data(fp, desc=True))
-    with open("data/non-hs.fasta") as fp:
-        neg = np.array(get_data(fp, desc=True))
-    len_pos = 280
-    len_neg = 737
-    pos_random = np.random.permutation(len_pos)
-    neg_random = np.random.permutation(len_neg)
-    pos_cv = [pos[pos_random[:len_pos:5]], pos[pos_random[1:len_pos:5]], pos[pos_random[2:len_pos:5]],
-              pos[pos_random[3:len_pos:5]], pos[pos_random[4:len_pos:5]]]
-    neg_cv = [neg[neg_random[:len_neg:5]], neg[neg_random[1:len_neg:5]], neg[neg_random[2:len_neg:5]],
-              neg[neg_random[3:len_neg:5]], neg[neg_random[4:len_neg:5]]]
+    vecs = pos_vecs + neg_vecs
+    labels = [1] * len(pos_vecs) + [-1] * len(neg_vecs)
 
-    # Write 5 fold file.
+    # Write file.
+    write_libsvm(vecs, labels, write_file)
+
+
+def cv5_libsvm(c, g, train_prefix, test_prefix):
     for i in range(5):
-        # Write test file.
-        write_file = "data/cv5/test_pos_" + str(i)
-        with open(write_file, 'w') as fp:
-            for seq in pos_cv[i]:
-                seq_desc = "".join([">", seq.name, "\n"])
-                fp.write(seq_desc)
-                fp.write(seq.seq)
-                fp.write("\n")
-                fp.write("\n")
+        # Train. Usage: svm-predict [options] test_file model_file output_file
+        cmd = "libsvm\svm-train.exe -c " + str(c) + " -g " + str(g) + " -b 1 " + \
+              train_prefix + "_train_" + str(i) + " " + train_prefix + "_train_" + str(i) + ".model"
+        print(cmd)
+        os.system(cmd)
 
-        write_file = "data/cv5/test_neg_" + str(i)
-        with open(write_file, 'w') as fp:
-            for seq in neg_cv[i]:
-                seq_desc = "".join([">", seq.name, "\n"])
-                fp.write(seq_desc)
-                fp.write(seq.seq)
-                fp.write("\n")
-                fp.write("\n")
+        # Test. Usage: svm-predict [options] test_file model_file output_file
+        cmd = "libsvm\svm-predict.exe -b 1 " + test_prefix + "_test_" + str(i) + " " + \
+              train_prefix + "_train_" + str(i) + ".model" + " " + test_prefix + "_test_" + str(i) + ".predict"
+        print(cmd)
+        os.system(cmd)
 
-        # Write train file.
-        write_file = "data/cv5/train_pos_" + str(i)
-        with open(write_file, 'w') as fp:
-            for j in range(i):
-                for seq in pos_cv[j]:
-                    seq_desc = "".join([">", seq.name, "\n"])
-                    fp.write(seq_desc)
-                    fp.write(seq.seq)
-                    fp.write("\n")
-                    fp.write("\n")
-            for j in range(i+1, 5):
-                for seq in pos_cv[j]:
-                    seq_desc = "".join([">", seq.name, "\n"])
-                    fp.write(seq_desc)
-                    fp.write(seq.seq)
-                    fp.write("\n")
-                    fp.write("\n")
-
-        write_file = "data/cv5/train_neg_" + str(i)
-        with open(write_file, 'w') as fp:
-            for j in range(i):
-                for seq in neg_cv[j]:
-                    seq_desc = "".join([">", seq.name, "\n"])
-                    fp.write(seq_desc)
-                    fp.write(seq.seq)
-                    fp.write("\n")
-                    fp.write("\n")
-            for j in range(i+1, 5):
-                for seq in neg_cv[j]:
-                    seq_desc = "".join([">", seq.name, "\n"])
-                    fp.write(seq_desc)
-                    fp.write(seq.seq)
-                    fp.write("\n")
-                    fp.write("\n")
-
-    return pos_cv, neg_cv
-
-
-def cv5_borderline_smote_revc_kmer(fold_path, filename, k):
-    revc_kmer = RevcKmer(k=k, normalize=True, upto=True)
-    for i in range(5):
-        # Generate RevcKmer vecs.
-        with open(fold_path + "test_neg_" + str(i)) as fp:
-            test_neg_revc_kmer_vecs = revc_kmer.make_revckmer_vec(fp)
-        with open(fold_path + "test_pos_" + str(i)) as fp:
-            test_pos_revc_kmer_vecs = revc_kmer.make_revckmer_vec(fp)
-        with open(fold_path + "train_neg_" + str(i)) as fp:
-            train_neg_revc_kmer_vecs = revc_kmer.make_revckmer_vec(fp)
-        with open(fold_path + "train_pos_" + str(i)) as fp:
-            train_pos_revc_kmer_vecs = revc_kmer.make_revckmer_vec(fp)
-
-        # Generate borderline SMOTE synthetic vecs from train_vecs.
-        train_vecs = np.row_stack((train_pos_revc_kmer_vecs, train_neg_revc_kmer_vecs))
-        train_vecs_labels = [1] * len(train_pos_revc_kmer_vecs) + [-1] * len(train_neg_revc_kmer_vecs)
-        _1, synthetic, _2 = smote.borderline_smote(train_vecs, train_vecs_labels, 1, N=300, k=5)
-
-        # Write test file.
-        write_file = fold_path + filename + "_test_" + str(i) + ".txt"
-        test_vecs = test_pos_revc_kmer_vecs + test_neg_revc_kmer_vecs
-        test_vecs_labels = [1] * len(test_pos_revc_kmer_vecs) + [-1] * len(test_neg_revc_kmer_vecs)
-        write_libsvm(test_vecs, test_vecs_labels, write_file)
-
-        # Write train file.
-        write_file = fold_path + filename + "_train_" + str(i) + ".txt"
-        train_pos_revc_kmer_vecs = train_pos_revc_kmer_vecs + synthetic.tolist()
-        train_vecs = train_pos_revc_kmer_vecs + train_neg_revc_kmer_vecs
-        train_vecs_labels = [1] * len(train_pos_revc_kmer_vecs) + [-1] * len(train_neg_revc_kmer_vecs)
-        write_libsvm(train_vecs, train_vecs_labels, write_file)
-
-
-def cv5_psednc(fold_path, filename):
-    """Contrast experiment by psednc in article
-    Prediction of DNase I Hypersensitive Sites by Using Pseudo Nucleotide Compositions.
-    """
-    lamada = 6
-    w = 0.2
-    psednc = PseDNC(lamada, w)
-    for i in range(5):
-        # Generate RevcKmer_PseDNC vecs.
-        with open(fold_path + "test_neg_" + str(i)) as fp:
-            test_neg_psednc_vecs = psednc.make_psednc_vec(fp)
-        with open(fold_path + "test_pos_" + str(i)) as fp:
-            test_pos_psednc_vecs = psednc.make_psednc_vec(fp)
-        with open(fold_path + "train_neg_" + str(i)) as fp:
-            train_neg_psednc_vecs = psednc.make_psednc_vec(fp)
-        with open(fold_path + "train_pos_" + str(i)) as fp:
-            train_pos_psednc_vecs = psednc.make_psednc_vec(fp)
-
-        n_lamada = "_".join([str(lamada), str(w)])
-        # Write test file.
-        write_file = fold_path + filename + "_" + n_lamada + "_test_" + str(i) + ".txt"
-        test_vecs = test_pos_psednc_vecs + test_neg_psednc_vecs
-        test_vecs_labels = [1] * len(test_pos_psednc_vecs) + [-1] * len(test_neg_psednc_vecs)
-        write_libsvm(test_vecs, test_vecs_labels, write_file)
-
-        # Write train file.
-        write_file = fold_path + filename + "_" + n_lamada + "_train_" + str(i) + ".txt"
-        train_vecs = train_pos_psednc_vecs + train_neg_psednc_vecs
-        train_vecs_labels = [1] * len(train_pos_psednc_vecs) + [-1] * len(train_neg_psednc_vecs)
-        write_libsvm(train_vecs, train_vecs_labels, write_file)
-
-
-def cv5_smote_revc_psednc(fold_path, filename, k):
-    # Generate pos and neg vecs and SMOTE synthetic vecs.
-    lamada = 6
-    w = 0.8
-    revc_kmer = RevcKmer(k=k, normalize=True, upto=True)
-    psednc = PseDNC(lamada, w)
-    for i in range(5):
-        # Generate RevcKmer_PseDNC vecs.
-        with open(fold_path + "test_neg_" + str(i)) as fp:
-            test_neg_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(fp))
-        with open(fold_path + "test_neg_" + str(i)) as fp:
-            test_neg_psednc_vecs = np.array(psednc.make_psednc_vec(fp))
-        test_neg_revc_psednc_vecs = np.column_stack((test_neg_revc_kmer_vecs, test_neg_psednc_vecs[:, -lamada:]))
-
-        with open(fold_path + "test_pos_" + str(i)) as fp:
-            test_pos_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(fp))
-        with open(fold_path + "test_pos_" + str(i)) as fp:
-            test_pos_psednc_vecs = np.array(psednc.make_psednc_vec(fp))
-        test_pos_revc_psednc_vecs = np.column_stack((test_pos_revc_kmer_vecs, test_pos_psednc_vecs[:, -lamada:]))
-
-        with open(fold_path + "train_neg_" + str(i)) as fp:
-            train_neg_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(fp))
-        with open(fold_path + "train_neg_" + str(i)) as fp:
-            train_neg_psednc_vecs = np.array(psednc.make_psednc_vec(fp))
-        train_neg_revc_psednc_vecs = np.column_stack((train_neg_revc_kmer_vecs, train_neg_psednc_vecs[:, -lamada:]))
-
-        with open(fold_path + "train_pos_" + str(i)) as fp:
-            train_pos_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(fp))
-        with open(fold_path + "train_pos_" + str(i)) as fp:
-            train_pos_psednc_vecs = np.array(psednc.make_psednc_vec(fp))
-        train_pos_revc_psednc_vecs = np.column_stack((train_pos_revc_kmer_vecs, train_pos_psednc_vecs[:, -lamada:]))
-
-        # Generate synthetic vecs from pos_vecs.
-        synthetic1 = (smote.smote(train_pos_revc_psednc_vecs, N=100, k=5)).tolist()
-        synthetic2 = (smote.smote(train_pos_revc_psednc_vecs, N=50, k=5)).tolist()
-        synthetic = np.row_stack((synthetic1, synthetic2))
-
-        n_lamada = "_".join([str(lamada), str(w)])
-        # Write test file.
-        write_file = fold_path + filename + '_' + n_lamada + "_test_" + str(i) + ".txt"
-        test_vecs = test_pos_revc_psednc_vecs.tolist() + test_neg_revc_psednc_vecs.tolist()
-        test_vecs_labels = [1] * len(test_pos_revc_psednc_vecs) + [-1] * len(test_neg_revc_psednc_vecs)
-        write_libsvm(test_vecs, test_vecs_labels, write_file)
-
-        # Write train file.
-        write_file = fold_path + filename + '_' + n_lamada + "_train_" + str(i) + ".txt"
-        train_pos_vecs = train_pos_revc_psednc_vecs.tolist() + synthetic.tolist()
-        train_vecs = train_pos_vecs + train_neg_revc_psednc_vecs.tolist()
-        train_vecs_labels = [1] * len(train_pos_vecs) + [-1] * len(train_neg_revc_psednc_vecs)
-        write_libsvm(train_vecs, train_vecs_labels, write_file)
-
-
-def cv5_borderline_smote_revc_psednc(fold_path, filename, k):
-    lamada = 6
-    w = 0.8
-    revc_kmer = RevcKmer(k=k, normalize=True, upto=True)
-    psednc = PseDNC(lamada, w)
-    for i in range(5):
-        # Generate RevcKmer_PseDNC vecs.
-        with open(fold_path + "test_neg_" + str(i)) as fp:
-            test_neg_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(fp))
-        with open(fold_path + "test_neg_" + str(i)) as fp:
-            test_neg_psednc_vecs = np.array(psednc.make_psednc_vec(fp))
-        test_neg_revc_psednc_vecs = np.column_stack((test_neg_revc_kmer_vecs, test_neg_psednc_vecs[:, -lamada:]))
-
-        with open(fold_path + "test_pos_" + str(i)) as fp:
-            test_pos_revc_vecs = np.array(revc_kmer.make_revckmer_vec(fp))
-        with open(fold_path + "test_pos_" + str(i)) as fp:
-            test_pos_psednc_vecs = np.array(psednc.make_psednc_vec(fp))
-        test_pos_revc_psednc_vecs = np.column_stack((test_pos_revc_vecs, test_pos_psednc_vecs[:, -lamada:]))
-
-        with open(fold_path + "train_neg_" + str(i)) as fp:
-            train_neg_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(fp))
-        with open(fold_path + "train_neg_" + str(i)) as fp:
-            train_neg_psednc_vecs = np.array(psednc.make_psednc_vec(fp))
-        train_neg_revc_psednc_vecs = np.column_stack((train_neg_revc_kmer_vecs, train_neg_psednc_vecs[:, -lamada:]))
-
-        with open(fold_path + "train_pos_" + str(i)) as fp:
-            train_pos_revc_kmer_vecs = np.array(revc_kmer.make_revckmer_vec(fp))
-        with open(fold_path + "train_pos_" + str(i)) as fp:
-            train_pos_psednc_vecs = np.array(psednc.make_psednc_vec(fp))
-        train_pos_revc_psednc_vecs = np.column_stack((train_pos_revc_kmer_vecs, train_pos_psednc_vecs[:, -lamada:]))
-
-        # Generate borderline SMOTE synthetic vecs from train_vecs.
-        train_vecs = np.row_stack((train_pos_revc_psednc_vecs, train_neg_revc_psednc_vecs))
-        train_vecs_labels = [1] * len(train_pos_revc_psednc_vecs) + [-1] * len(train_neg_revc_psednc_vecs)
-        _1, synthetic, _2 = smote.borderline_smote(train_vecs, train_vecs_labels, 1, N=300, k=5)
-
-        n_lamada = "_".join([str(lamada), str(w)])
-        # Write test file.
-        write_file = fold_path + filename + '_' + n_lamada + "_test_" + str(i) + ".txt"
-        test_vecs = test_pos_revc_psednc_vecs.tolist() + test_neg_revc_psednc_vecs.tolist()
-        test_vecs_labels = [1] * len(test_pos_revc_psednc_vecs) + [-1] * len(test_neg_revc_psednc_vecs)
-        write_libsvm(test_vecs, test_vecs_labels, write_file)
-
-        # Write train file.
-        write_file = fold_path + filename + '_' + n_lamada + "_train_" + str(i) + ".txt"
-        train_pos_vecs = train_pos_revc_psednc_vecs.tolist() + synthetic.tolist()
-        train_vecs = train_pos_vecs + train_neg_revc_psednc_vecs.tolist()
-        train_vecs_labels = [1] * len(train_pos_vecs) + [-1] * len(train_neg_revc_psednc_vecs)
-        write_libsvm(train_vecs, train_vecs_labels, write_file)
+    pass
 
 
 if __name__ == "__main__":
-    print("Begin.")
-    start_time = time.time()
+    # kmer_tool(k=2, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/kmer_2")
+    # psednc_tool(lamada=3, w=0.2, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/psednc_3_0.2")
+    # dacc_tool(lag=1, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/dacc_1")
 
-    # Experiment.
-    whole_revc_kmer(pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", k=6)
-    # cv5_revc_kmer(fold_path="data/cv5/", filename="cv5_revc_kmer", k=6)
-    # cv5_borderline_smote_revc_kmer(fold_path="data/cv5/", filename="cv5_borderline_revc_kmer", k=6)
-    # cv5_psednc("data/cv5/", "cv5_psednc")
-    # cv5_smote_revc_psednc(fold_path="data/cv5/", filename="cv5_smote_revc_psednc", k=6)
-    # cv5_borderline_smote_revc_psednc(fold_path="data/cv5/", filename="cv5_smote_borderline", k=6)
+    # cv5_kmer_tool(k=2, test_neg_file="data/cv5/test_neg_0", test_pos_file="data/cv5/test_pos_0",
+    # train_neg_file="data/cv5/train_neg_0", train_pos_file="data/cv5/train_pos_0",
+    # test_write_file="res/cv5_kmer_test", train_write_file="res/cv5_kmer_train")
 
-    print("End. Used %s s." % (time.time() - start_time))
+    # cv5_dacc_tool(lag=1, test_neg_file="data/cv5/test_neg_0", test_pos_file="data/cv5/test_pos_0",
+    # train_neg_file="data/cv5/train_neg_0", train_pos_file="data/cv5/train_pos_0",
+    # test_write_file="res/cv5_dacc_test", train_write_file="res/cv5_dacc_train")
+
+    # cv5_psednc_tool(lamada=3, w=0.2, test_neg_file="data/cv5/test_neg_0", test_pos_file="data/cv5/test_pos_0",
+    # train_neg_file="data/cv5/train_neg_0", train_pos_file="data/cv5/train_pos_0",
+    # test_write_file="res/cv5_psednc_test", train_write_file="res/cv5_psednc_train")
+
+    # 各方法最优参数生成特征向量
+    # auto_cv5_kmer_tool(k=2, write_file_prefix="res/cv5_kmer/cv5_kmer")
+    # auto_cv5_dacc_tool(lag=1, write_file_prefix="res/cv5_dacc/cv5_dacc")
+    # auto_cv5_psednc_tool(lamada=3, w=0.2, write_file_prefix="res/cv5_psednc/cv5_psednc")
+
+    # 各特征向量五份交叉验证。
+    # cv5_libsvm(c=512, g=2, train_prefix="res/cv5_kmer/cv5_kmer", test_prefix="res/cv5_kmer/cv5_kmer")
+    # cv5_libsvm(c=32768, g=0.0078125, train_prefix="res/cv5_dacc/cv5_dacc", test_prefix="res/cv5_dacc/cv5_dacc")
+    # cv5_libsvm(c=2048, g=2, train_prefix="res/cv5_psednc/cv5_psednc", test_prefix="res/cv5_psednc/cv5_psednc")
+
+    # 论文PseDNC最优参数生成特征向量并5份交叉验证。
+    # auto_cv5_psednc_tool(lamada=6, w=0.2, write_file_prefix="res/cv5_psednc_article/cv5_psednc")
+    # cv5_libsvm(c=512, g=0.0078125, train_prefix="res/cv5_psednc_article/cv5_psednc",
+    #            test_prefix="res/cv5_psednc_article/cv5_psednc")
+
+    # 论文kmer最优参数生成特征向量并5份交叉验证。
+    # auto_cv5_upto_revckmer_tool(k=6, write_fold="res/cv5_revckmer_article/cv5_kmer")
+    # cv5_libsvm(c=2, g=0.001953125, train_prefix="res/cv5_revckmer_article/cv5_kmercv5_kmer",
+    #            test_prefix="res/cv5_revckmer_article/cv5_kmercv5_kmer")
+
+    pass

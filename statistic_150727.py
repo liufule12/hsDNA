@@ -86,6 +86,10 @@ if __name__ == "__main__":
     # print(calculate_acc(fold_path="data/cv5_revc_kmer/", filename_prefix="cv5_revc_kmer"))
     # print(calculate_roc_auc(fold_path="data/cv5_revc_kmer/", filename_prefix="cv5_revc_kmer"))
 
+    # CV5 borderline SMOTE RevcKmer.
+    print(calculate_acc(fold_path="data/cv5_borderline_revc_kmer/", filename_prefix="cv5_borderline_revc_kmer"))
+    print(calculate_roc_auc(fold_path="data/cv5_borderline_revc_kmer/", filename_prefix="cv5_borderline_revc_kmer"))
+
     # CV5 PseDNC.
     # print(calculate_acc(fold_path="data/cv5_psednc6_0.2/", filename_prefix="cv5_psednc_6_0.2"))
     # print(calculate_roc_auc(fold_path="data/cv5_psednc6_0.2/", filename_prefix="cv5_psednc_6_0.2"))
@@ -100,3 +104,6 @@ if __name__ == "__main__":
                         filename_prefix="cv5_smote_borderline_6_0.8"))
     print(calculate_roc_auc(fold_path="data/cv5_borderline_revc_kmer_psednc/",
                             filename_prefix="cv5_smote_borderline_6_0.8"))
+
+    # CV5 psednc_article.
+    print()
