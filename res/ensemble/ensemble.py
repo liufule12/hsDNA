@@ -29,8 +29,7 @@ def ensemble_res():
                 neg_prob = w1 * float(kmer_val[1]) + w2 * float(dacc_prob[idx][1]) + w3 * float(psednc_prob[idx][1])
                 ensemble_prob.append((pos_prob, neg_prob))
 
-            write_name = "E:/ensemble_output/" + \
-                         str(int(round(w1, 2) * 100)) + str(int(round(w2, 2) * 100)) + str(int(round(w3, 2) * 100))
+            write_name = "E:/ensemble_output/" + str(round(w1, 2)) + '_' + str(round(w2, 2)) + '_' + str(round(w3, 2))
             print(write_name)
             with open(write_name, 'wb') as fp:
                 for pos_prob, neg_prob in ensemble_prob:
