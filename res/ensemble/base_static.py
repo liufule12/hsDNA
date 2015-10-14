@@ -1,7 +1,6 @@
 # encoding=utf-8
 __author__ = 'Fule Liu'
 
-
 import math
 import os
 
@@ -47,12 +46,12 @@ def calc_acc(file_name):
             if label == '1':
                 tp += 1
             else:
-                fp += 1
+                fn += 1
         else:
             if label == '-1':
                 tn += 1
             else:
-                fn += 1
+                fp += 1
 
     print(tp, fp, tn, fn)
     sn = tp * 1.0 / (tp + fn)
@@ -64,5 +63,9 @@ def calc_acc(file_name):
 
 
 if __name__ == "__main__":
+    # base_statics_cv5("../cv5_kmer_predict/")
+    # base_statics_cv5("../cv_revckmer_article_predict/")
+    # base_statics_cv5("../cv5_dacc_predict/")
     # base_statics_cv5("../cv_psednc_article_predict/")
-    base_statics_cv5("../cv_revckmer_article_predict/")
+
+    base_statics_cv5("../cv5_psednc_predict/")
