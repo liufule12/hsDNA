@@ -63,4 +63,6 @@ def calc_acc(file_name):
 
 
 if __name__ == "__main__":
-    statics("E:/ensemble_output/")
+    # statics("E:/ensemble_output/")
+    # statics("E:/ensemble_output4/")
+    statics("E:/test/")
