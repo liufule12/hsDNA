@@ -210,6 +210,7 @@ def cv5_libsvm(c, g, train_prefix, test_prefix):
 
 
 if __name__ == "__main__":
+    # 生成一个特征向量文件for web server.
     # kmer_tool(k=2, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/kmer_2")
     # psednc_tool(lamada=3, w=0.2, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/psednc_3_0.2")
     # dacc_tool(lag=1, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/dacc_1")
