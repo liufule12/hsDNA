@@ -163,6 +163,17 @@ def kmer_tool(k, pos_file, neg_file, write_file):
     write_libsvm(vecs, labels, write_file)
 
 
+def revc_kmer_tool(k, pos_file, neg_file, write_file):
+    revc_kmer = RevcKmer(k=k, upto=True, normalize=True)
+    with open(pos_file) as fp:
+        pos_vecs = revc_kmer.make_revckmer_vec(fp)
+    with open(neg_file) as fp:
+        neg_vecs = revc_kmer.make_revckmer_vec(fp)
+    vecs = pos_vecs + neg_vecs
+    labels = [1] * len(pos_vecs) + [-1] * len(neg_vecs)
+    write_libsvm(vecs, labels, write_file)
+
+
 def dacc_tool(lag, pos_file, neg_file, write_file):
     dacc = DACC(lag=lag)
     with open(pos_file) as fp:
@@ -212,6 +223,7 @@ def cv5_libsvm(c, g, train_prefix, test_prefix):
 if __name__ == "__main__":
     # 生成一个特征向量文件for web server.
     # kmer_tool(k=2, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/kmer_2")
+    # revc_kmer_tool(k=6, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/revckmer_6")
     # psednc_tool(lamada=3, w=0.2, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/psednc_3_0.2")
     # dacc_tool(lag=1, pos_file="data/hs.fasta", neg_file="data/non-hs.fasta", write_file="res/dacc_1")
 
